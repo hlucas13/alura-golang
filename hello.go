@@ -1,13 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 )
 
-func main() {
+const monitoramentos = 3
+const delay = 5
 
+func main() {
 	exibeIntroducao()
 
 	for {
@@ -59,25 +65,67 @@ func leComando() int {
 	// fmt.Scanf("%d", &comando) // %d representa um inteiro - & é o endereço de memoria da variavel que quero salvar (ponteiro)
 	fmt.Scan(&comandoLido) // Scan não preciso passar o tipo de dado, a variavel ja inferiu
 	fmt.Println("O comando escolhido foi", comandoLido)
+	fmt.Println("")
 
 	return comandoLido
 }
 
 func iniciarMonitoramento() {
 	fmt.Println("Monitorando...")
-	var sites [4]string
-	sites[0] = "https://random-status-code.herokuapp.com/"
-	sites[1] = "https://www.alura.com.br/"
-	sites[2] = "https://www.caelum.com.br/"
 
-	fmt.Println(sites)
+	// sites := []string{"https://random-status-code.herokuapp.com/", "https://www.alura.com.br/", "https://www.caelum.com.br/"}
+	sites := leSitesDoArquivo()
 
-	site := "https://random-status-code.herokuapp.com/"
-	resp, _ := http.Get(site)
+	for i := 0; i < monitoramentos; i++ {
+		for i, site := range sites {
+			fmt.Println("Testando site", i, ":", site)
+			testaSite(site)
+		}
+
+		time.Sleep(delay * time.Second)
+		fmt.Println("")
+	}
+
+	fmt.Println("")
+}
+
+func testaSite(site string) {
+	resp, err := http.Get(site)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
 
 	if resp.StatusCode == 200 {
 		fmt.Println("Site:", site, "foi carregado com sucesso!")
 	} else {
 		fmt.Println("Site:", site, "está com problemas. Status Code:", resp.StatusCode)
 	}
+}
+
+func leSitesDoArquivo() []string {
+	var sites []string
+
+	arquivo, err := os.Open("sites.txt")
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
+
+	leitor := bufio.NewReader(arquivo)
+
+	for {
+		linha, err := leitor.ReadString('\n')
+		linha = strings.TrimSpace(linha)
+
+		sites = append(sites, linha)
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	arquivo.Close()
+
+	return sites
 }
